@@ -4,7 +4,7 @@ from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
 # Import tools as actual instances from your tools module
-from .tools import (
+from MultiAgent.tools import (
     arxiv_search,
     semantic_scholar_search,
     doi_resolver,
