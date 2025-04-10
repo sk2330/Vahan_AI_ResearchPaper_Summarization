@@ -1,2 +1,6 @@
 langchain
 crewai
+arxiv 
+semanticscholar 
+PyPDF2 
+gtts
