@@ -183,4 +183,3 @@ def audio_generator(text: str) -> str:
     gTTS(text=text[:5000], lang='en').save(filepath)
     return filepath
 
-
