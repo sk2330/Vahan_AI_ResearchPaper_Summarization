@@ -13,8 +13,7 @@ import tempfile
 from typing import List, Dict, Union
 import uuid
 from transformers import pipeline
-from Pathlib import Path
-
+from pathlib import Path 
 
 @tool("pdf_text_extractor")
 def pdf_text_extractor(file_path: str) -> str:
