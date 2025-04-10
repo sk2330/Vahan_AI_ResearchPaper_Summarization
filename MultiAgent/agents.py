@@ -3,9 +3,23 @@ from textwrap import dedent
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
+# Import tools as actual instances from your tools module
+from .tools import (
+    arxiv_search,
+    semantic_scholar_search,
+    doi_resolver,
+    pdf_text_extractor,
+    url_processor,
+    topic_classifier,
+    text_summarizer,
+    cross_paper_synthesizer,
+    audio_generator,
+    citation_generator
+)
+
 class CustomAgents:
     def __init__(self):
-        # Initializing open-source models
+        # Initialize models
         self.Summarizer = pipeline("summarization", model="google-t5/t5-small")
         self.TextGeneration = pipeline("text-generation", model="google/flan-t5-large")
         self.TopicClassifier = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
@@ -21,7 +35,7 @@ class CustomAgents:
                 Search for and collect research papers based on user queries, 
                 including metadata like title, authors, abstract, and publication year.
             """),
-            tools=["arxiv_search", "semantic_scholar_search", "doi_resolver"],
+            tools=[arxiv_search, semantic_scholar_search, doi_resolver],
             allow_delegation=False,
             verbose=True
         )
@@ -37,7 +51,7 @@ class CustomAgents:
                 Process research papers to extract structured text and metadata 
                 for further analysis.
             """),
-            tools=["pdf_text_extractor", "url_processor"],
+            tools=[pdf_text_extractor, url_processor],
             allow_delegation=False,
             verbose=True
         )
@@ -53,10 +67,9 @@ class CustomAgents:
                 Analyze research paper content and classify it into user-defined topics 
                 using semantic similarity scoring.
             """),
-            tools=["topic_classifier"],
+            tools=[topic_classifier],
             allow_delegation=False,
-            verbose=True,
-            llm=self.TopicClassifier  # Use SentenceTransformer for classification
+            verbose=True
         )
 
     def summarization_agent(self):
@@ -70,10 +83,9 @@ class CustomAgents:
                 Generate structured summaries for individual research papers, focusing 
                 on key findings, methodology, and conclusions. Include citations for each paper.
             """),
-            tools=["text_summarizer", "citation_generator"],  # Added citation tool
+            tools=[text_summarizer, citation_generator],
             allow_delegation=False,
-            verbose=True,
-            llm=self.Summarizer  # Use T5 for summarization
+            verbose=True
         )
 
     def synthesis_agent(self):
@@ -87,10 +99,9 @@ class CustomAgents:
                 Create a comprehensive synthesis across multiple research papers on a given topic, 
                 highlighting common findings and identifying gaps in knowledge. Include citations for all referenced papers.
             """),
-            tools=["cross_paper_synthesizer", "citation_generator"],  # Added citation tool
+            tools=[cross_paper_synthesizer, citation_generator],
             allow_delegation=False,
-            verbose=True,
-            llm=self.TextGeneration  # Use Flan-T5 for synthesis
+            verbose=True
         )
 
     def audio_agent(self):
@@ -104,7 +115,7 @@ class CustomAgents:
                 Convert research paper summaries or syntheses into high-quality audio files 
                 suitable for podcasts or presentations.
             """),
-            tools=["audio_generator"],
+            tools=[audio_generator],
             allow_delegation=False,
             verbose=True
         )

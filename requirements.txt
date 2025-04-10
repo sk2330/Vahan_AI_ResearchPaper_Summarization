@@ -11,4 +11,5 @@ numpy
 requests
 sentence-transformers 
 crossref-commons
-HuggingFace     
+HuggingFace 
+Pathlib    

@@ -1,6 +1,5 @@
 from crewai_tools import tool
 import os
-from transformers import pipeline
 import requests
 from bs4 import BeautifulSoup
 import PyPDF2
@@ -11,8 +10,10 @@ from gtts import gTTS
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import tempfile
-from typing import List, Dict, Union,str
+from typing import List, Dict, Union
 import uuid
+from transformers import pipeline
+from Pathlib import Path
 
 
 @tool("pdf_text_extractor")
@@ -57,12 +58,12 @@ def semantic_scholar_search(query: str, max_results: int = 5) -> List[Dict]:
         results = sch.search_paper(query, limit=max_results)
         return [
             {
-                "title": result.get("title", "Unknown Title"),
-                "authors": [author.get("name", "Unknown Author") for author in result.get("authors", [])],
-                "abstract": result.get("abstract", ""),
-                "year": result.get("year", ""),
-                "url": result.get("url", ""),
-                "doi": result.get("externalIds", {}).get("DOI", ""),
+                "title": result.title,
+                "authors": [author.name for author in result.authors],
+                "abstract": result.abstract,
+                "year": result.year,
+                "url": result.url,
+                "doi": result.externalIds.get("DOI", "") if result.externalIds else "",
                 "source": "Semantic Scholar",
             }
             for result in results
@@ -86,12 +87,16 @@ def url_processor(url: str) -> Dict[str, Union[str, Dict]]:
                 tmp_path = tmp.name
             
             text = pdf_text_extractor(tmp_path)
-            os.unlink(tmp_path)  # Cleanup temporary file
+            os.unlink(tmp_path)
             
-            filename = os.path.basename(url)
-            title = filename.replace('.pdf', '').replace('_', ' ').replace('-', ' ')
-            
-            return {"text": text, "metadata": {"title": title, "url": url, "source": "URL (PDF)"}}
+            return {
+                "text": text,
+                "metadata": {
+                    "title": Path(url).stem.replace('_', ' '),
+                    "url": url,
+                    "source": "URL (PDF)"
+                }
+            }
         
         else:
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -101,17 +106,19 @@ def url_processor(url: str) -> Dict[str, Union[str, Dict]]:
             text = soup.get_text(separator='\n').strip()
             title = soup.title.string if soup.title else "Unknown Title"
             
-            meta_tags = {meta['name'].lower(): meta['content'] for meta in soup.find_all('meta') if meta.get('name') and meta.get('content')}
+            meta_tags = {meta['name'].lower(): meta['content'] 
+                        for meta in soup.find_all('meta') 
+                        if meta.get('name') and meta.get('content')}
             
             return {
                 "text": text,
                 "metadata": {
                     "title": title,
-                    "authors": meta_tags.get('author', '').split(','),
+                    "authors": meta_tags.get('author', '').split(', '),
                     "description": meta_tags.get('description', ''),
                     "url": url,
                     "source": "URL (HTML)",
-                },
+                }
             }
     except Exception as e:
         raise RuntimeError(f"Error processing URL: {e}")
@@ -121,101 +128,88 @@ def doi_resolver(doi: str) -> Dict[str, Union[str, List]]:
     """Resolve DOI to retrieve paper metadata and URL."""
     try:
         doi = doi.strip().removeprefix('doi:').removeprefix('https://doi.org/')
-        
         work = crossref_commons.retrieval.get_publication_as_json(doi)
-        
-        title = work.get('title', ['Unknown Title'])[0]
-        authors = [' '.join(filter(None, [author.get('given'), author.get('family')])) for author in work.get('author', [])]
-        
-        abstract = work.get('abstract', '')
-        year = work['published']['date-parts'][0][0] if 'published' in work and 'date-parts' in work['published'] else ''
-        
-        journal = work.get('container-title', [''])[0]
-        publisher = work.get('publisher', '')
-        
-        url = f"https://doi.org/{doi}"
         
         return {
             "doi": doi,
-            "title": title,
-            "authors": authors,
-            "abstract": abstract,
-            "year": year,
-            "journal": journal,
-            "publisher": publisher,
-            "url": url,
+            "title": work.get('title', ['Unknown Title'])[0],
+            "authors": [' '.join(filter(None, [a.get('given'), a.get('family')])) 
+                       for a in work.get('author', [])],
+            "abstract": work.get('abstract', ''),
+            "year": work.get('published', {}).get('date-parts', [[None]])[0][0] or '',
+            "journal": work.get('container-title', [''])[0],
+            "publisher": work.get('publisher', ''),
+            "url": f"https://doi.org/{doi}",
             "source": "DOI",
         }
     except Exception as e:
         raise RuntimeError(f"Error resolving DOI: {e}")
-    
+
 @tool("citation_generator")
 def citation_generator(paper_metadata: Dict) -> Dict[str, str]:
     """Generate citations in multiple formats from paper metadata."""
-    # Extract metadata
-    title = paper_metadata.get('title', 'Unknown Title')
-    authors = paper_metadata.get('authors', [])
-    year = paper_metadata.get('year', 'n.d.')  ###n.d---no date/ot dated
-    if not year and 'published' in paper_metadata:
-        year = paper_metadata['published'][:4] if paper_metadata.get('published') else 'n.d.'
-    
-    journal = paper_metadata.get('journal', '')
-    publisher = paper_metadata.get('publisher', '')
-    url = paper_metadata.get('url', '')
-    doi = paper_metadata.get('doi', '')
-    
-    def format_authors_for_citation(authors: List[str]) -> str:
-
-        if not authors or len(authors) == 0:
+    def format_authors(authors: List[str]) -> str:
+        if not authors:
             return "Unknown"
-        elif len(authors) == 1:
+        if len(authors) == 1:
             return authors[0]
-        elif len(authors) == 2:
+        if len(authors) == 2:
             return f"{authors[0]} & {authors[1]}"
-        else:
-            return f"{authors[0]} et al." ### et al-and others
+        return f"{authors[0]} et al."
 
+    meta = paper_metadata
+    authors = format_authors(meta.get('authors', []))
+    year = meta.get('year', 'n.d.')
+    title = meta.get('title', 'Unknown Title')
+    journal = meta.get('journal', '')
+    publisher = meta.get('publisher', '')
+    doi = meta.get('doi', '')
+    url = meta.get('url', '')
 
-    author_citation = format_authors_for_citation(authors)
-    
-    #### Creating citations
-    apa = f"{author_citation} ({year}). {title}"
+    apa = f"{authors} ({year}). {title}."
     if journal:
-        apa += f". {journal}"
-    if publisher:
-        apa += f". {publisher}"
+        apa += f" {journal}."
+    if publisher and not journal:
+        apa += f" {publisher}."
     if doi:
-        apa += f". https://doi.org/{doi}"
+        apa += f" https://doi.org/{doi}"
     elif url:
-        apa += f". Retrieved from {url}"
+        apa += f" Retrieved from {url}"
     
-    return {"apa": apa}
-
+    return {"apa": apa.strip()}
 
 @tool("text_summarizer")
 def text_summarizer(text: str) -> str:
     """Summarizes text using Hugging Face's T5 model."""
-    summarizer = pipeline("summarization",  model="google-t5/t5-small")
-    summary = summarizer(text[:1024], max_length=500, min_length=50, do_sample=False)
-    return summary[0]['summary_text']
+    summarizer = pipeline("summarization", model="t5-small")
+    return summarizer(
+        text[:1024],
+        max_length=500,
+        min_length=50,
+        do_sample=False
+    )[0]['summary_text']
 
 @tool("topic_classifier")
 def topic_classifier(text: str, topics: List[str]) -> Dict[str, float]:
     """Classifies text into topics using SentenceTransformer."""
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    text_embedding = model.encode(text)
-    topic_embeddings = model.encode(topics)
-    similarities = cosine_similarity([text_embedding], topic_embeddings)[0]
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    text_embed = model.encode(text)
+    topic_embeds = model.encode(topics)
+    similarities = cosine_similarity([text_embed], topic_embeds)[0]
     return {topic: float(score) for topic, score in zip(topics, similarities)}
 
 @tool("cross_paper_synthesizer")
-def cross_paper_synthesizer(papers: list, topic: str) -> str:
-    """Generates synthesis across multiple papers using Hugging Face's Flan-T5 model."""
-    synthesizer = pipeline("text-generation", model="google/flan-t5-large")
-    context = "\n\n".join([f"Title: {p['title']}\nSummary: {p['summary']}" for p in papers])
-    prompt = f"Create a synthesis on the topic '{topic}' from the following papers:\n\n{context}"
-    synthesis = synthesizer(prompt, max_length=500)
-    return synthesis[0]['generated_text']
+def cross_paper_synthesizer(papers: List[Dict], topic: str) -> str:
+    """Generates synthesis across multiple papers."""
+    synthesizer = pipeline("text2text-generation", model="google/flan-t5-large")
+    context = "\n\n".join(
+        f"Title: {p['title']}\nSummary: {p.get('summary', '')}" 
+        for p in papers
+    )
+    return synthesizer(
+        f"Analyze these papers on {topic}:\n{context}",
+        max_length=500
+    )[0]['generated_text']
 
 @tool("audio_generator")
 def audio_generator(text: str) -> str:
@@ -225,4 +219,3 @@ def audio_generator(text: str) -> str:
     os.makedirs("audio_files", exist_ok=True)
     gTTS(text=text[:5000], lang='en').save(filepath)
     return filepath
-
