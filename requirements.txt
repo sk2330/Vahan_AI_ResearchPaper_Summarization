@@ -1,6 +1,12 @@
 langchain
 crewai
+crewai-tools
 arxiv 
 semanticscholar 
 PyPDF2 
 gtts
+beautifulsoup4
+scikit-learn 
+numpy
+requests
+
