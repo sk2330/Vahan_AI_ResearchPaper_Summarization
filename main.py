@@ -1,10 +1,8 @@
 import os
 import argparse
 import json
-from typing import list, dict
 import uuid
 from crewai import Crew, Process
-
 from MultiAgent.agents import CustomAgents
 from MultiAgent.tasks import (
     search_task, upload_task, process_task, classification_task, 

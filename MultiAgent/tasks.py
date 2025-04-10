@@ -1,6 +1,14 @@
 from crewai import Task
-from MultiAgent.agents import research_agent, processing_agent, classification_agent, summarization_agent, synthesis_agent, audio_agent
+from MultiAgent.agents import CustomAgents
 
+agents = CustomAgents()
+
+research_agent = agents.research_agent()
+processing_agent = agents.processing_agent()
+classification_agent = agents.classification_agent()
+summarization_agent = agents.summarization_agent()
+synthesis_agent = agents.synthesis_agent()
+audio_agent = agents.audio_agent()
 
 search_task = Task(
     description="""
