@@ -1,6 +1,7 @@
 from crewai import Agent
 from textwrap import dedent
 from transformers import pipeline
+import torch
 from sentence_transformers import SentenceTransformer
 
 # Import tools as actual instances from your tools module
@@ -20,8 +21,8 @@ from MultiAgent.tools import (
 class CustomAgents:
     def __init__(self):
         # Initialize models
-        self.Summarizer = pipeline("summarization", model="google-t5/t5-small")
-        self.TextGeneration = pipeline("text-generation", model="google/flan-t5-large")
+        self.Summarizer = pipeline("summarization", model="google-t5/t5-small", torch_dtype=torch.float16)
+        self.TextGeneration = pipeline("text-generation", model="openai-community/gpt2-medium", torch_dtype=torch.float16)
         self.TopicClassifier = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     def research_agent(self):

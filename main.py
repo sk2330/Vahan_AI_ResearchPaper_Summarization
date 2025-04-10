@@ -5,8 +5,13 @@ import uuid
 from crewai import Crew, Process
 from MultiAgent.agents import CustomAgents
 from MultiAgent.tasks import (
-    search_task, upload_task, process_task, classification_task, 
-    summary_task, synthesis_task, audio_task
+    search_task,
+    upload_task,
+    process_task,
+    classification_task,
+    summary_task,
+    synthesis_task,
+    audio_task
 )
 
 os.makedirs("uploads", exist_ok=True)
@@ -128,26 +133,7 @@ class ResearchPaperSummarizer:
                 topic_file = topic.lower().replace(" ", "_") + ".md"
                 with open(os.path.join(synthesis_dir, topic_file), "w") as f:
                     f.write(synthesis) #### Save the syntheses
-
-# Command-line interface
-def parse_args():
-    parser = argparse.ArgumentParser(description="Research Paper Summarization System")
-    parser.add_argument("--query", type=str, help="Search query")
-    parser.add_argument("--topics", type=str, nargs="+", help="Topics for classification")
-    parser.add_argument("--max-results", type=int, default=5, help="Max results per source")
-    parser.add_argument("--pdf", type=str, nargs="*", help="PDF file paths")
-    parser.add_argument("--url", type=str, nargs="*", help="Paper URLs")
-    parser.add_argument("--doi", type=str, nargs="*", help="DOI references")
-    return parser.parse_args()
-
-if __name__ == "__main__":
-    args = parse_args()
-    
-    # Validate input sources
-    if not any([args.query, args.pdf, args.url, args.doi]):
-        print("Error: Provide at least one input source (query, PDF, URL, or DOI)")
-        exit(1)
-    
+  
     # Run system
     system = ResearchPaperSummarizer()
     system.process_query(
