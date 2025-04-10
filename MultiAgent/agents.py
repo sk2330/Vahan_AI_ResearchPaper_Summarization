@@ -3,11 +3,9 @@ from textwrap import dedent
 from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 
-
-
 class CustomAgents:
     def __init__(self):
-        ##### Initializing open-source models
+        # Initializing open-source models
         self.Summarizer = pipeline("summarization", model="google-t5/t5-small")
         self.TextGeneration = pipeline("text-generation", model="google/flan-t5-large")
         self.TopicClassifier = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
@@ -70,12 +68,12 @@ class CustomAgents:
             """),
             goal=dedent("""
                 Generate structured summaries for individual research papers, focusing 
-                on key findings, methodology, and conclusions.
+                on key findings, methodology, and conclusions. Include citations for each paper.
             """),
-            tools=["text_summarizer"],
+            tools=["text_summarizer", "citation_generator"],  # Added citation tool
             allow_delegation=False,
             verbose=True,
-            llm=self.Summarizer  #####Use T5 for summarization
+            llm=self.Summarizer  # Use T5 for summarization
         )
 
     def synthesis_agent(self):
@@ -87,12 +85,12 @@ class CustomAgents:
             """),
             goal=dedent("""
                 Create a comprehensive synthesis across multiple research papers on a given topic, 
-                highlighting common findings and identifying gaps in knowledge.
+                highlighting common findings and identifying gaps in knowledge. Include citations for all referenced papers.
             """),
-            tools=["cross_paper_synthesizer"],
+            tools=["cross_paper_synthesizer", "citation_generator"],  # Added citation tool
             allow_delegation=False,
             verbose=True,
-            llm=self.TextGeneration  #####Use Flan-T5 for synthesis
+            llm=self.TextGeneration  # Use Flan-T5 for synthesis
         )
 
     def audio_agent(self):

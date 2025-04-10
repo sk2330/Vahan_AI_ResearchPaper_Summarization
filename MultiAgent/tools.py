@@ -148,6 +148,49 @@ def doi_resolver(doi: str) -> Dict[str, Union[str, List]]:
         }
     except Exception as e:
         raise RuntimeError(f"Error resolving DOI: {e}")
+    
+@tool("citation_generator")
+def citation_generator(paper_metadata: Dict) -> Dict[str, str]:
+    """Generate citations in multiple formats from paper metadata."""
+    # Extract metadata
+    title = paper_metadata.get('title', 'Unknown Title')
+    authors = paper_metadata.get('authors', [])
+    year = paper_metadata.get('year', 'n.d.')  ###n.d---no date/ot dated
+    if not year and 'published' in paper_metadata:
+        year = paper_metadata['published'][:4] if paper_metadata.get('published') else 'n.d.'
+    
+    journal = paper_metadata.get('journal', '')
+    publisher = paper_metadata.get('publisher', '')
+    url = paper_metadata.get('url', '')
+    doi = paper_metadata.get('doi', '')
+    
+    def format_authors_for_citation(authors: List[str]) -> str:
+
+        if not authors or len(authors) == 0:
+            return "Unknown"
+        elif len(authors) == 1:
+            return authors[0]
+        elif len(authors) == 2:
+            return f"{authors[0]} & {authors[1]}"
+        else:
+            return f"{authors[0]} et al." ### et al-and others
+
+
+    author_citation = format_authors_for_citation(authors)
+    
+    #### Creating citations
+    apa = f"{author_citation} ({year}). {title}"
+    if journal:
+        apa += f". {journal}"
+    if publisher:
+        apa += f". {publisher}"
+    if doi:
+        apa += f". https://doi.org/{doi}"
+    elif url:
+        apa += f". Retrieved from {url}"
+    
+    return {"apa": apa}
+
 
 @tool("text_summarizer")
 def text_summarizer(text: str) -> str:
