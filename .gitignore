@@ -1,2 +1,5 @@
 venv
-dotenv
+.env
+uploads/
+results/
+audio_files/

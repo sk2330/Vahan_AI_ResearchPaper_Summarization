@@ -1,25 +1,34 @@
 import os
+from dotenv import load_dotenv
 import json
 import uuid
 from flask import Flask, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 from crewai import Crew, Process
 from MultiAgent.agents import CustomAgents
-from MultiAgent.tasks import (
-    search_task, upload_task, process_task, 
-    classification_task, summary_task, 
+from MultiAgent.tasks import (  
+    search_task, upload_task, process_task,
+    classification_task, summary_task,
     synthesis_task, audio_task
 )
 
-# Initialize Flask app
+load_dotenv()
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('audio_files', exist_ok=True)
 os.makedirs('results', exist_ok=True)
 
 class ResearchPaperSummarizer:
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            raise ValueError("OpenAI API key is required. Set via .env or parameter.")
+            
+        os.environ["OPENAI_API_KEY"] = self.api_key 
+
     def __init__(self):
         self.agents = CustomAgents()
         agent_instances = {
@@ -31,10 +40,8 @@ class ResearchPaperSummarizer:
             "audio": self.agents.audio_agent()
         }
         
-        # Task setup
-        self.tasks = self._setup_tasks(agent_instances)
+        self.tasks = self._map_tasks(agent_instances)
         
-        # Crew initialization
         self.crew = Crew(
             agents=list(agent_instances.values()),
             tasks=self.tasks,
@@ -43,28 +50,35 @@ class ResearchPaperSummarizer:
             verbose=True
         )
 
-    def _setup_tasks(self, agents):
-        tasks = [
-            search_task.replace(agent=agents["research"]),
-            upload_task.replace(agent=agents["processing"])
+    def _map_tasks(self, agents):
+        """Dynamically map agents to imported tasks"""
+        return [
+            self._create_task(search_task, agents["research"]),
+            self._create_task(upload_task, agents["processing"]),
+            self._create_task(process_task, agents["processing"], 
+                            context=[search_task, upload_task]),
+            self._create_task(classification_task, agents["classification"], 
+                            context=[process_task]),
+            self._create_task(summary_task, agents["summarization"], 
+                            context=[classification_task]),
+            self._create_task(synthesis_task, agents["synthesis"], 
+                            context=[summary_task]),
+            self._create_task(audio_task, agents["audio"], 
+                            context=[synthesis_task])
         ]
-        
-        process = process_task.replace(
-            agent=agents["processing"],
-            context=tasks[:2]
-        )
-        tasks.append(process)
-        
-        tasks += [
-            classification_task.replace(agent=agents["classification"], context=[process]),
-            summary_task.replace(agent=agents["summarization"], context=[process]),
-            synthesis_task.replace(agent=agents["synthesis"], context=[process]),
-            audio_task.replace(agent=agents["audio"], context=[process])
-        ]
-        
-        return tasks
 
-    def process_query(self, query, topics, pdf_paths, urls, dois):
+    def _create_task(self, base_task, agent, context=None):
+        return type(base_task)(
+            description=base_task.description,
+            agent=agent,
+            expected_output=base_task.expected_output,
+            tools=base_task.tools.copy() if hasattr(base_task, 'tools') else [],
+            context=context or [],
+            allow_delegation=getattr(base_task, 'allow_delegation', False),
+            verbose=getattr(base_task, 'verbose', False)
+        )
+
+    def process_query(self, query, topics, pdf_paths, urls, dois,max_results=5):
         session_id = str(uuid.uuid4())[:8]
         result_dir = os.path.join("results", session_id)
         os.makedirs(result_dir, exist_ok=True)
@@ -72,6 +86,7 @@ class ResearchPaperSummarizer:
         inputs = {
             'query': query,
             'topics': topics,
+            'max_results': max_results,
             'pdf_paths': pdf_paths,
             'urls': urls,
             'dois': dois,
@@ -111,7 +126,7 @@ class ResearchPaperSummarizer:
                 with open(os.path.join(synthesis_dir, filename), 'w') as f:
                     f.write(synthesis)
 
-# Initialize the summarizer system
+#### Initialize the summarizer system
 summarizer = ResearchPaperSummarizer()
 
 @app.route('/', methods=['GET', 'POST'])
@@ -119,9 +134,9 @@ def index():
     if request.method == 'POST':
         # Handle form submission
         query = request.form.get('query', '')
-        topics = request.form.get('topics', '').split(',')
-        urls = request.form.get('urls', '').split(',')
-        dois = request.form.get('dois', '').split(',')
+        topics = [t.strip() for t in request.form.get('topics', '').split(',') if t.strip()]
+        urls = [u.strip() for u in request.form.get('urls', '').split(',') if u.strip()]
+        dois = [d.strip() for d in request.form.get('dois', '').split(',') if d.strip()]
         
         # Handle file uploads
         pdf_paths = []

@@ -13,3 +13,4 @@ sentence-transformers
 crossref-commons
 HuggingFace 
 Pathlib    
+flask
