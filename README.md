@@ -5,7 +5,7 @@
 3. Open the Anaconda Prompt and use the following commands:
 1. cd your_file_path
 2. D: / C:/ E: (in which ever drive it is present)
-3. next use - code . (to open VS code in that location itself)
+3. next use-->  code .[code space dot] (to open VS code in that location itself)
 
 4. After opening, create a virtual environment to run the project:
 1. conda create -p venv (your virtual environment name- can be anything) python== 3.10 (the version I used for this project)
