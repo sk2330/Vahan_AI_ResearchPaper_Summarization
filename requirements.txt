@@ -1,6 +1,5 @@
 langchain
 crewai
-crewai-tools
 arxiv 
 semanticscholar 
 PyPDF2 
