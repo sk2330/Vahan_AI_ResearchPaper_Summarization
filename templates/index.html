@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Paper Summarization System</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Research Paper Summarization System</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="query">Research Query (Required):</label>
+                <input type="text" id="query" name="query" required 
+                       placeholder="Example: Large Language Model safety mechanisms">
+            </div>
+
+            <div class="form-group">
+                <label for="topics">Topics (Comma-separated, Required):</label>
+                <input type="text" id="topics" name="topics" required
+                       placeholder="Example: AI Safety, ML Ethics, NLP">
+            </div>
+
+            <div class="form-group">
+                <label for="pdf_files">Upload PDFs (Multiple allowed, Max 100MB each):</label>
+                <input type="file" id="pdf_files" name="pdf_files" multiple 
+                       accept=".pdf" 
+                       data-max-size="104857600">
+            </div>
+
+            <div class="form-group">
+                <label for="urls">Paper URLs (Comma-separated):</label>
+                <input type="text" id="urls" name="urls" 
+                       placeholder="Example: https://arxiv.org/abs/1234.5678, https://example.com/paper.pdf">
+            </div>
+
+            <div class="form-group">
+                <label for="dois">DOIs (Comma-separated):</label>
+                <input type="text" id="dois" name="dois" 
+                       placeholder="Example: 10.1000/xyz123, 10.1000/abc456">
+            </div>
+
+            <button type="submit">Process Research</button>
+        </form>
+    </div>
+</body>
+</html>

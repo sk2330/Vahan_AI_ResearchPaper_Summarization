@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detailed Results</title>
+</head>
+<body>
+    <h1>Detailed Processing Results</h1>
+    <h2>Summaries:</h2>
+    <ul>
+        {% for paper_id, summary in results.summaries.items() %}
+        <li>
+            <a href="/download/{{ session_id }}/summaries/{{ paper_id }}.md">
+                {{ paper_id }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <h2>Syntheses:</h2>
+    <ul>
+        {% for topic, synthesis in results.syntheses.items() %}
+        <li>
+            <a href="/download/{{ session_id }}/syntheses/{{ topic|lower|replace(' ', '_') }}.md">
+                {{ topic }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

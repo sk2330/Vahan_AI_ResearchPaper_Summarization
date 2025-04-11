@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Processing Results</title>
+</head>
+<body>
+    <h1>Processing Completed</h1>
+    <p>Session ID: {{ result.session_id }}</p>
+    <h2>Results Summary:</h2>
+    <ul>
+        <li>Papers Processed: {{ result.result_count.papers }}</li>
+        <li>Summaries Generated: {{ result.result_count.summaries }}</li>
+        <li>Syntheses Created: {{ result.result_count.syntheses }}</li>
+        <li>Audio Files Produced: {{ result.result_count.audio_files }}</li>
+    </ul>
+    <a href="/results/{{ result.session_id }}">View Detailed Results</a>
+</body>
+</html>
